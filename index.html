@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Çağ Ötesi Hedef Bulma Simülatörü</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+    html, body {
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: 'Share Tech Mono', monospace;
+      background: #000;
+      color: #00ff99;
+    }
+    #splash {
+      position: fixed; top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: #000;
+      display: flex; justify-content: center; align-items: center;
+      z-index: 100;
+    }
+    #splash img {
+      width: 50vmin;
+      animation: splashZoom 60s ease-in-out forwards;
+      filter: drop-shadow(0 0 20px #00ff99);
+    }
+    @keyframes splashZoom {
+      0%,100% { transform: scale(1.5); }
+      50%     { transform: scale(5); }
+    }
+    #logoFixed {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      width: 60px; filter: drop-shadow(0 0 5px #00ff99);
+      display: none; z-index: 50;
+    }
+    #terminal {
+      position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
+      width: 90%; max-width: 800px; height: calc(100% - 100px);
+      padding: 20px; box-sizing: border-box;
+      background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);
+      border-radius: 10px; box-shadow: 0 0 15px #00ff99;
+      overflow-y: auto; display: none; z-index: 40;
+    }
+    .line { margin: 5px 0; white-space: pre-wrap; }
+    .neonText {
+      text-shadow: 0 0 5px #00ff99, 0 0 10px #00ff99, 0 0 20px #00ff99;
+    }
+    .cmd-input {
+      width: 100%; background: transparent;
+      border: none; outline: none;
+      color: #00ff99; font-size: 1.1em;
+    }
+    #uploadInput, #citySelect {
+      display: none; margin-top: 10px;
+    }
+    #modalTerminal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.95);
+      backdrop-filter: blur(5px);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+      color: #00ff99;
+      font-family: 'Share Tech Mono', monospace;
+    }
+    #modalHeader {
+      position: absolute;
+      top: 10px; right: 20px;
+      font-size: 2em;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+      color: #00ff99;
+      filter: drop-shadow(0 0 10px #00ff99);
+    }
+    #modalContent {
+      text-align: center;
+    }
+    #mobeseImage {
+      width: 80vw;
+      max-width: 600px;
+      filter: blur(8px) grayscale(100%);
+      border: 3px solid #00ff99;
+      margin-bottom: 20px;
+      user-select: none;
+      pointer-events: none;
+    }
+    #locationCode {
+      font-size: 1.2em;
+      user-select: none;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+<div id="splash">
+  <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS17NH7pIsqoUDEGAw71r5C1h3yWjlaWz_uhg&s" alt="Logo">
+</div>
+<img id="logoFixed" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS17NH7pIsqoUDEGAw71r5C1h3yWjlaWz_uhg&s" alt="Logo">
+<div id="terminal" aria-live="polite"></div>
+<input type="file" id="uploadInput" accept="image/*">
+<select id="citySelect">
+  <option value="">Şehir Seçin</option>
+  <option value="Diyarbakır">Diyarbakır</option>
+</select>
+<div id="modalTerminal" role="dialog" aria-modal="true" aria-labelledby="modalHeader">
+  <div id="modalHeader" title="Kapat">X</div>
+  <div id="modalContent">
+    <img id="mobeseImage" src="https://foto.sondakika.com/haber/2011/01/05/erzincan-da-mobeseye-takilan-ilginc-goruntuler_amp.jpg" alt="Bulanık MOBESE Görüntüsü">
+    <div id="locationCode"></div>
+  </div>
+</div>
+
+<script>
+  const splash = document.getElementById('splash');
+  const logoFixed = document.getElementById('logoFixed');
+  const terminal = document.getElementById('terminal');
+  const uploadIn = document.getElementById('uploadInput');
+  const citySelect = document.getElementById('citySelect');
+  const modalTerm = document.getElementById('modalTerminal');
+  const modalClose = document.getElementById('modalHeader');
+  const locationCodeDiv = document.getElementById('locationCode');
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  async function write(txt, speed=50){
+    const line = document.createElement('div');
+    line.className = 'line neonText';
+    terminal.appendChild(line);
+    for(let ch of txt){
+      line.textContent += ch;
+      await sleep(speed);
+    }
+    terminal.scrollTop = terminal.scrollHeight;
+  }
+
+  function promptInput(ph=''){
+    return new Promise(resolve => {
+      const line = document.createElement('div');
+      line.className = 'line';
+      const inp = document.createElement('input');
+      inp.className = 'cmd-input neonText';
+      inp.placeholder = ph;
+      line.appendChild(inp);
+      terminal.appendChild(line);
+      inp.focus(); terminal.scrollTop = terminal.scrollHeight;
+      inp.addEventListener('keydown', e => {
+        if(e.key === 'Enter'){
+          inp.disabled = true;
+          resolve(inp.value.trim());
+        }
+      });
+    });
+  }
+
+  async function connectingAnimation(durationMs=10000){
+    const line = document.createElement('div');
+    line.className = 'line neonText';
+    terminal.appendChild(line);
+    const baseText = "Veritabanına bağlanılıyor";
+    line.textContent = baseText;
+    const dotsSpan = document.createElement('span');
+    line.appendChild(dotsSpan);
+    const dots = [];
+    for(let i=0; i<3; i++){
+      const span = document.createElement('span');
+      span.textContent = '.';
+      span.style.color = 'transparent';
+      span.style.transition = 'color 0.3s ease';
+      dotsSpan.appendChild(span);
+      dots.push(span);
+    }
+    const cycleDuration = 1500;
+    const totalCycles = Math.floor(durationMs / cycleDuration);
+    for(let cycle=0; cycle<totalCycles; cycle++){
+      for(let i=0; i<3; i++){
+        dots.forEach(d => d.style.color = 'transparent');
+        dots[i].style.color = '#00ff99';
+        await sleep(15000);
+      }
+    }
+    dots.forEach(d => d.style.color = 'transparent');
+    terminal.scrollTop = terminal.scrollHeight;
+  }
+
+  async function startSequence(){
+    await sleep(10000);
+    splash.style.display = 'none';
+    logoFixed.style.display = 'block';
+    terminal.style.display = 'block';
+
+    await write("Hedef Bulma Simülatörü Başlatılıyor...");
+    await write('"start" yazın ve enter’a basın.');
+    let cmd = await promptInput('start');
+    while(cmd.toLowerCase() !== 'start'){
+      await write('Geçersiz komut. "start" yazmalısınız.');
+      cmd = await promptInput('start');
+    }
+
+    await write('Lütfen 11 haneli TC Kimlik Numaranızı girin:');
+    let tc = await promptInput('TC Kimlik No');
+    while(!/^\d{11}$/.test(tc)){
+      await write('Geçersiz TC Kimlik Numarası. 11 haneli rakam giriniz.');
+      tc = await promptInput('TC Kimlik No');
+    }
+
+    await write(`"${tc}" için sistem ID’si aranıyor...`);
+    await connectingAnimation(20000);
+
+    const userId = 'ID-656590';
+    const dbInfo = `
+╭━━━━━━━━━━━━━━━╮
+┃➥ + Sorgu Başarılı
+╰━━━━━━━━━━━━━━━╯
+╭━━━━━━━━━━━━━━━╮
+┃➥ ID: 2423
+┃➥ TC: ${tc}
+┃➥ ADI: NEDİM
+┃➥ SOYADI: DİRİ
+┃➥ CİNSİYET: Erkek
+┃➥ DOĞUM TARİHİ: 1975-08-29
+┃➥ NÜFUS İL: Diyarbakır
+┃➥ NÜFUS İLÇE: Sur
+┃➥ ANNE ADI: FELEK
+┃➥ ANNE TC: 24241672222
+┃➥ BABA ADI: ALİ
+┃➥ BABA TC: 24256671722
+┃➥ YAŞ: 50
+╰━━━━━━━━━━━━━━━╯
+ID-2423 upload yazarak fotoğraf yükleyiniz`.trim();
+
+    await write(dbInfo, 5);
+    await write(`Devam etmek için "${userId} upload" yazın ve enter’a basın.`);
+    let up = await promptInput(`${userId} upload`);
+    while(up.toLowerCase() !== `${userId.toLowerCase()} upload`){
+      await write(`Komut hatalı. "${userId} upload" yazmalısınız.`);
+      up = await promptInput(`${userId} upload`);
+    }
+
+    uploadIn.click();
+
+    const file = await new Promise(resolve => {
+      uploadIn.onchange = () => resolve(uploadIn.files[0]);
+    });
+
+    const fileName = file.name;
+    await write(`"${fileName}" dosyası yüklendi. MOBESE görüntüsü hazırlanıyor...`);
+    await write("Lütfen şehir seçin:");
+    citySelect.style.display = 'block';
+
+    const selectedCity = await new Promise(resolve => {
+      citySelect.addEventListener('change', () => {
+        if (citySelect.value) {
+          citySelect.style.display = 'none';
+          resolve(citySelect.value);
+        }
+      }, { once: true });
+    });
+
+    await write(`Seçilen şehir: ${selectedCity}`);
+    await write("LOKASYON KODU hazırlanıyor... Lütfen bekleyiniz.");
+
+    await sleep(2225000); // 37 dakika 5 saniye
+
+    modalTerm.style.display = 'flex';
+    locationCodeDiv.innerHTML = `
+┏━━━━━━━━━━━━━━━━━━━━━━━┓<br>
+┃➥ LOKASYON KODU: TR-21-DIY-37.937128, 40.182762<br>
+┃➥ Bölge: ${selectedCity} <br>
+┃➥ Konum:Kamera - Ana Cadde <br>
+┃➥ Erişim: Sadece izleme modunda<br>
+┗━━━━━━━━━━━━━━━━━━━━━━━┛`;
+
+    await write('Lokasyon kodu görüntülendi. Terminal kapatmak için "close" yazın.');
+
+    let closeCmd = await promptInput('close');
+    while(closeCmd.toLowerCase() !== 'close'){
+      await write('Terminali kapatmak için "close" yazmalısınız.');
+      closeCmd = await promptInput('close');
+    }
+
+    modalTerm.style.display = 'none';
+    await write('İşlem tamamlandı. Terminal kapatılıyor...');
+  }
+
+  modalClose.addEventListener('click', () => {
+    modalTerm.style.display = 'none';
+  });
+
+  startSequence();
+</script>
+
+</body>
+</html>
